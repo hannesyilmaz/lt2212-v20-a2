@@ -1,8 +1,12 @@
-import argparse
-import random
-from sklearn.datasets import fetch_20newsgroups
-from sklearn.base import is_classifier
-import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+import string, numpy as np
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import MultinomialNB
 random.seed(42)
 
 
@@ -18,8 +22,24 @@ def part1(samples):
 
 
 def extract_features(samples):
-    print("Extracting features ...")
-    pass #Fill this in
+    stop_words = stopwords.words('english')
+    table = str.maketrans('', '', string.punctuation)
+    samples_cleaned = []
+    vectorizer = TfidfVectorizer(encoding='utf-8')
+    ps = PorterStemmer() 
+    for sample in samples:
+        words = sample.split() #Tokenize words
+        stripped = [w.lower().translate(table) for w in words] #strip punctuations
+        words = [word for word in stripped if word.isalpha()] #check for alphanumeric values
+        words = [w for w in words if not w in stop_words] # Remove stop words
+        words = [ps.stem(w) for w in words]
+        new_sample = " ".join(words)
+        samples_cleaned.append(new_sample)
+    X = vectorizer.fit_transform(samples_cleaned)
+    print(X.shape)
+    print(type(X))
+    X = X.toarray()
+    return X
 
 
 
@@ -36,19 +56,20 @@ def part2(X, n_dim):
     return X_dr
 
 
-def reduce_dim(X,n=10):
-    #fill this in
-    pass
-
+def reduce_dim( X, n=10):
+    pca_model = PCA(n_components=n)
+    pca_model.fit(X)
+    transformed_pca = pca_model.transform(X)
+    return transformed_pca
 
 
 ##### PART 3
 #DONT CHANGE THIS FUNCTION EXCEPT WHERE INSTRUCTED
 def get_classifier(clf_id):
     if clf_id == 1:
-        clf = "" # <--- REPLACE THIS WITH A SKLEARN MODEL
+        clf = MultinomialNB(alpha=.01)
     elif clf_id == 2:
-        clf = "" # <--- REPLACE THIS WITH A SKLEARN MODEL
+        clf =  LogisticRegression()
     else:
         raise KeyError("No clf with id {}".format(clf_id))
 
@@ -56,7 +77,19 @@ def get_classifier(clf_id):
     print("Getting clf {} ...".format(clf.__class__.__name__))
     return clf
 
-#DONT CHANGE THIS FUNCTION
+def train_classifer(clf, X, y):
+    assert is_classifier(clf)
+    clf.fit(X, y)
+    
+def evalute_classifier(clf, X, y):
+    assert is_classifier(clf)
+    y_pred = clf.predict(X)
+    print(classification_report(y, y_pred))
+    
+def shuffle_split(X,y):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True)
+    return X_train, X_test, y_train, y_test
+
 def part3(X, y, clf_id):
     #PART 3
     X_train, X_test, y_train, y_test = shuffle_split(X,y)
@@ -81,21 +114,6 @@ def part3(X, y, clf_id):
     # evalute model
     print("Evaluating classcifier ...")
     evalute_classifier(clf, X_test, y_test)
-
-
-def shuffle_split(X,y):
-    pass # Fill in this
-
-
-def train_classifer(clf, X, y):
-    assert is_classifier(clf)
-    ## fill in this
-
-
-def evalute_classifier(clf, X, y):
-    assert is_classifier(clf)
-    #Fill this in
-
 
 ######
 #DONT CHANGE THIS FUNCTION
